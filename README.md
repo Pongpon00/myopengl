@@ -32,7 +32,7 @@ The program simulates:
 ---
 
 ## 💫 Demo
-[![Watch the video](https://img.youtube.com/vi/aS_2yh3SxeY/maxresdefault.jpg)](https://youtu.be/aS_2yh3SxeY)
+<p align="center"> <a href="https://youtu.be/aS_2yh3SxeY" target="_blank"> <img src="https://img.youtube.com/vi/aS_2yh3SxeY/maxresdefault.jpg" alt="Solar System Demo Video" width="70%"> </a> </p>
 
 ## 🌠 Matetials
 I use texture assets from the following sources
@@ -41,3 +41,9 @@ I use texture assets from the following sources
 - Solar System Scope
   
 Big Thanks!💖
+
+## 🧑‍💻 Author
+**Pongpon Butseemart**  
+King Mongkut’s University of Technology Thonburi (KMUTT)  
+Computer Engineering — 4th Year  
+Assignment 2: 3D Kinetic Sculpture and Animation  
