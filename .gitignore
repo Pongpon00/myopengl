@@ -2,3 +2,9 @@
 bin/
 build/
 out/
+
+includes/
+
+.DS_Store
+
+.vscode/
