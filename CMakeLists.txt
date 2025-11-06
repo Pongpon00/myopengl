@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.10...3.25)
-cmake_policy(VERSION 3.10)
+cmake_minimum_required(VERSION 3.0)
+cmake_policy(VERSION 3.0)
 
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 project(LearnOpenGL)
@@ -25,6 +25,9 @@ if(WIN32)
 endif(WIN32)
 
 link_directories(${CMAKE_SOURCE_DIR}/includes)
+include_directories(/opt/homebrew/include)
+link_directories(/opt/homebrew/lib)
+
 
 # find the required packages
 find_package(GLM REQUIRED)
@@ -80,10 +83,14 @@ set(PROJECTS
   2.1_triangle_action
   2.2_sierpinski_triangle
   3_waviez
+  model_loader
 )
 
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
 include_directories(${CMAKE_BINARY_DIR}/configuration)
+
+add_library(STB_IMAGE "src/stb_image.cpp")
+set(LIBS ${LIBS} STB_IMAGE)
 
 add_library(GLAD "src/glad.c")
 set(LIBS ${LIBS} GLAD)
