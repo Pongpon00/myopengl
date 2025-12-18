@@ -84,6 +84,7 @@ set(PROJECTS
   2.2_sierpinski_triangle
   3_waviez
   model_loader
+  assignment3_simple_3d_game
 )
 
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
