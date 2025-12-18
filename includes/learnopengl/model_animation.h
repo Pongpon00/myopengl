@@ -203,7 +203,7 @@ private:
 	}
 
 
-	unsigned int TextureFromFile(const char* path, const string& directory, bool gamma = false)
+	inline unsigned int TextureFromFile(const char* path, const string& directory, bool gamma = false)
 	{
 		string filename = string(path);
 		filename = directory + '/' + filename;
