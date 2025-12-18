@@ -83,7 +83,6 @@ set(PROJECTS
   2.1_triangle_action
   2.2_sierpinski_triangle
   3_waviez
-  model_loader
   assignment3_simple_3d_game
 )
 
