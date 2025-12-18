@@ -28,14 +28,17 @@ struct CowController {
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window, CowController &cow, const Ground &ground);
-void updateCowControls(GLFWwindow *window, CowController &cow, const Ground &ground);
+void processInput(GLFWwindow *window, CowController &cow, const Ground &ground, const std::vector<glm::vec3>& treePositions, float treeRadius);
+void updateCowControls(GLFWwindow *window, CowController &cow, const Ground &ground, const std::vector<glm::vec3>& treePositions, float treeRadius);
 void updateChaseCamera(const CowController &cow);
 glm::mat4 buildCowModelMatrix(const CowController &cow, const Ground &ground);
+glm::vec3 randomGroundPosition(const Ground& ground, std::mt19937& rng);
+std::vector<glm::vec3> generateTreePositions(std::size_t count, const Ground& ground, std::mt19937& rng, float minSpacing, const glm::vec3& avoidCenter, float avoidRadius);
+bool collidesWithTrees(const glm::vec3& pos, float cowRadius, const std::vector<glm::vec3>& treePositions, float treeRadius);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1200;
+const unsigned int SCR_HEIGHT = 900;
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -58,6 +61,10 @@ float orangeRadius = 0.45f;
 float groundSize = 50.0f;
 std::size_t chocolateCount = 25;
 std::size_t orangeCount = 10;
+std::size_t treeCount = 25;
+float treeScale = 1.5f;
+float treeCollisionRadius = 0.05f;
+float treeSpacing = 3.0f;
 
 unsigned int loadTexture(const char *path)
 {
@@ -121,6 +128,71 @@ glm::vec3 getCowWorldPosition(const CowController &cow, const Ground &ground)
     return glm::vec3(cow.position.x, cowY, cow.position.z);
 }
 
+glm::vec3 randomGroundPosition(const Ground& ground, std::mt19937& rng)
+{
+    float half = ground.getHalfSize() - 1.0f; // keep a small margin from the edges
+    std::uniform_real_distribution<float> dist(-half, half);
+    glm::vec3 pos;
+    pos.x = dist(rng);
+    pos.z = dist(rng);
+    pos.y = ground.getHeightAt(pos.x, pos.z);
+    return pos;
+}
+
+std::vector<glm::vec3> generateTreePositions(std::size_t count, const Ground& ground, std::mt19937& rng, float minSpacing, const glm::vec3& avoidCenter, float avoidRadius)
+{
+    std::vector<glm::vec3> positions;
+    positions.reserve(count);
+    const int maxAttempts = 50;
+
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        glm::vec3 candidate(0.0f);
+        bool placed = false;
+        for (int attempt = 0; attempt < maxAttempts && !placed; ++attempt)
+        {
+            candidate = randomGroundPosition(ground, rng);
+            float distToAvoid = glm::length(glm::vec2(candidate.x - avoidCenter.x, candidate.z - avoidCenter.z));
+            if (distToAvoid < avoidRadius)
+                continue;
+
+            bool overlaps = false;
+            for (const auto& pos : positions)
+            {
+                float separation = glm::length(glm::vec2(candidate.x - pos.x, candidate.z - pos.z));
+                if (separation < minSpacing)
+                {
+                    overlaps = true;
+                    break;
+                }
+            }
+
+            if (!overlaps)
+            {
+                positions.push_back(candidate);
+                placed = true;
+            }
+        }
+
+        if (!placed)
+            positions.push_back(candidate); // last best effort if spacing failed repeatedly
+    }
+
+    return positions;
+}
+
+bool collidesWithTrees(const glm::vec3& pos, float cowRadius, const std::vector<glm::vec3>& treePositions, float treeRadius)
+{
+    float minDistance = cowRadius + treeRadius;
+    for (const auto& treePos : treePositions)
+    {
+        float distanceXZ = glm::length(glm::vec2(pos.x - treePos.x, pos.z - treePos.z));
+        if (distanceXZ < minDistance)
+            return true;
+    }
+    return false;
+}
+
 int main()
 {
     // glfw: initialize and configure
@@ -177,6 +249,7 @@ int main()
     // -----------
     Model chocolateModel(FileSystem::getPath("resources/objects/chocolate/chocobar.FBX"));
     Model orangeModel(FileSystem::getPath("resources/objects/orange/orange.obj"));
+    Model treeModel(FileSystem::getPath("resources/objects/tree/tree.obj"));
     Model ourModel(FileSystem::getPath("resources/objects/cow/cow.dae"));
     CowController cow;
     std::random_device rd;
@@ -191,6 +264,13 @@ int main()
     groundShader.setInt("texture_diffuse1", 1);
 
     Ground ground(groundSize);
+    std::vector<glm::vec3> treePositions = generateTreePositions(
+        treeCount,
+        ground,
+        rng,
+        treeSpacing,
+        cow.position,
+        cowCollisionRadius + treeCollisionRadius + 0.5f);
     CollectibleSet chocolateSet(
         &chocolateModel,
         CollectibleConfig{
@@ -229,7 +309,7 @@ int main()
 
         // input
         // -----
-        processInput(window, cow, ground);
+        processInput(window, cow, ground, treePositions, treeCollisionRadius);
         updateChaseCamera(cow);
         glm::vec3 cowWorldPos = getCowWorldPosition(cow, ground);
         chocolateSet.handleCollisions(cowWorldPos, cowCollisionRadius, ground, rng);
@@ -254,6 +334,16 @@ int main()
         ourShader.use();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
+
+        for (const auto& treePos : treePositions)
+        {
+            glm::mat4 treeModelMat = glm::mat4(1.0f);
+            float treeY = ground.getHeightAt(treePos.x, treePos.z);
+            treeModelMat = glm::translate(treeModelMat, glm::vec3(treePos.x, treeY-0.6f, treePos.z));
+            treeModelMat = glm::scale(treeModelMat, glm::vec3(treeScale));
+            ourShader.setMat4("model", treeModelMat);
+            treeModel.Draw(ourShader);
+        }
 
         // render the loaded model
         glm::mat4 model = buildCowModelMatrix(cow, ground);
@@ -280,15 +370,15 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, CowController &cow, const Ground &ground)
+void processInput(GLFWwindow *window, CowController &cow, const Ground &ground, const std::vector<glm::vec3>& treePositions, float treeRadius)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    updateCowControls(window, cow, ground);
+    updateCowControls(window, cow, ground, treePositions, treeRadius);
 }
 
-void updateCowControls(GLFWwindow *window, CowController &cow, const Ground &ground)
+void updateCowControls(GLFWwindow *window, CowController &cow, const Ground &ground, const std::vector<glm::vec3>& treePositions, float treeRadius)
 {
     glm::vec3 forwardFlat(camera.Front.x, 0.0f, camera.Front.z);
     float forwardLength = glm::length(forwardFlat);
@@ -313,14 +403,16 @@ void updateCowControls(GLFWwindow *window, CowController &cow, const Ground &gro
     if (moveLength > 0.0f)
     {
         moveDir /= moveLength;
-        cow.position += moveDir * (cow.moveSpeed * deltaTime);
+        glm::vec3 candidate = cow.position + moveDir * (cow.moveSpeed * deltaTime);
+        float half = ground.getHalfSize() - 0.5f;
+        candidate.x = glm::clamp(candidate.x, -half, half);
+        candidate.z = glm::clamp(candidate.z, -half, half);
+
+        if (!collidesWithTrees(candidate, cowCollisionRadius, treePositions, treeRadius))
+            cow.position = candidate;
     }
 
     cow.yawDegrees = glm::degrees(std::atan2(forwardFlat.x, forwardFlat.z));
-
-    float half = ground.getHalfSize() - 0.5f;
-    cow.position.x = glm::clamp(cow.position.x, -half, half);
-    cow.position.z = glm::clamp(cow.position.z, -half, half);
 }
 
 void updateChaseCamera(const CowController &cow)
