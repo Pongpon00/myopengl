@@ -84,6 +84,7 @@ set(PROJECTS
   2.2_sierpinski_triangle
   3_waviez
   assignment3_simple_3d_game
+  assignment4_character_animation_control
 )
 
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
