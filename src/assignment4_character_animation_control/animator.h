@@ -1,3 +1,7 @@
+// Matt edit the code to support cross fade blending of 2 clips
+// 11/2/2024
+
+
 #pragma once
 
 #include <glm/glm.hpp>
@@ -13,12 +17,10 @@ class Animator
 public:
 	Animator(Animation* animation)
 	{
-		m_CurrentTime = 0.0f;
-		m_CurrentTime2 = 0.0f;
+		m_CurrentTime = 0.0;
 		m_CurrentAnimation = animation;
-		m_CurrentAnimation2 = nullptr;
-		m_blendAmount = 0.0f;
-		m_DeltaTime = 0.0f;
+		m_CurrentAnimation2 = NULL;
+		m_blendAmount = 0;
 
 		m_FinalBoneMatrices.reserve(100);
 
@@ -53,8 +55,7 @@ public:
 		m_blendAmount = blend;
 	}
 
-	glm::mat4 UpdateBlend(Bone* Bone1, Bone* Bone2)
-	{
+	glm::mat4 UpdateBlend(Bone* Bone1, Bone* Bone2) {
 		glm::vec3 bonePos1, bonePos2, finalPos;
 		glm::vec3 boneScale1, boneScale2, finalScale;
 		glm::quat boneRot1, boneRot2, finalRot;
@@ -86,7 +87,7 @@ public:
 		glm::mat4 nodeTransform = node->transformation;
 
 		Bone* Bone1 = m_CurrentAnimation->FindBone(nodeName);
-		Bone* Bone2 = nullptr;
+		Bone* Bone2 = NULL;
 		if (m_CurrentAnimation2) {
 			Bone2 = m_CurrentAnimation2->FindBone(nodeName);
 		}
